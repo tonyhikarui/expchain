@@ -81,7 +81,6 @@ async function getFaucetAll() {
     const userChoice = "1";
     let solveCaptcha;
     const apiKey = getAPI();
-
     if (userChoice === "1") {
         log.info("Using Anti-Captcha Solver...");
         solveCaptcha = solveAntiCaptcha;
@@ -105,7 +104,7 @@ async function getFaucetAll() {
         const payloadFaucet = {
             chain_id: 18880,
             to: wallet.address,
-            cf_turnstile_response: await solveCaptcha(apiKey),
+            cf_turnstile_response: await solveCaptcha(apiKey[0]),
         };
         const faucet = await getFaucet(payloadFaucet, proxy);
 
