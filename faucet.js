@@ -3,6 +3,9 @@ import { readWallets } from "./utils/script.js";
 import banner from "./utils/banner.js";
 import log from "./utils/logger.js";
 import readline from "readline";
+import axios from 'axios';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import fs from 'fs';
 
 function askUserOption() {
     return new Promise((resolve) => {
@@ -35,46 +38,53 @@ function askApiKey(solverName) {
     });
 }
 
-async function getFaucet(payload) {
+async function getFaucet(payload, proxy) {
+    const agent = new HttpsProxyAgent(proxy);
     const url = "https://faucetv2-api.expchain.ai/api/faucet";
     try {
         log.info("Getting Faucet...");
-        const response = await fetch(url, {
-            method: "POST",
+
+        // send post by axios
+        const response = await axios.post(url, payload, {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify(payload),
+            httpsAgent: agent,
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = response.data;
         return data;
     } catch (error) {
         log.error("Error Getting Faucet:", error);
     }
 }
 
+const getProxies = () => {
+    return fs.readFileSync('proxy.txt', 'utf8').split('\n').map(line => line.trim()).filter(Boolean);
+};
+
+const getAPI = () => {
+    return fs.readFileSync('api.txt', 'utf8').split('\n').map(line => line.trim()).filter(Boolean);
+};
+
+
 async function getFaucetAll() {
     log.warn(banner);
     const wallets = readWallets();
+    const proxies = getProxies();
     if (!wallets) {
         log.error("Please Create new wallets first...");
         process.exit(1);
     }
     log.info(`Found ${wallets.length} existing wallets...`);
 
-    const userChoice = await askUserOption();
+    const userChoice = "1";
     let solveCaptcha;
-    let apiKey;
+    const apiKey = getAPI();
 
     if (userChoice === "1") {
         log.info("Using Anti-Captcha Solver...");
         solveCaptcha = solveAntiCaptcha;
-        apiKey = await askApiKey("Anti-Captcha");
     } else if (userChoice === "2") {
         log.info("Using 2Captcha Solver...");
         solveCaptcha = solve2Captcha;
@@ -84,26 +94,32 @@ async function getFaucetAll() {
         process.exit(1);
     }
 
-    while (true) {
-        for (const wallet of wallets) {
-            log.info(`=== Starting Getting Faucet for wallet ${wallet.address} ===`);
-            const payloadFaucet = {
-                chain_id: 18880,
-                to: wallet.address,
-                cf_turnstile_response: await solveCaptcha(apiKey),
-            };
-            const faucet = await getFaucet(payloadFaucet);
 
-            if (faucet.message === 'Success') {
-                log.info(`Faucet Success https://blockscout-testnet.expchain.ai/address/${wallet.address}`)
-            } else {
-                log.error(`${faucet.data} Claim Faucet Failed...`)
-            }
-            log.info(`== Santuy, Cooldown 10 minutes before claim again ==`);
-            log.info(`== Ctrl + C to exit or run this on screen to get faucet every 10 minutes ==`);
-            await new Promise((resolve) => setTimeout(resolve, 10 * 60 * 1000));
+
+    for (let i = 0; i < proxies.length; i++) {
+        const proxy = proxies[i];
+        const wallet = wallets[i];
+
+        log.info(`=== Starting Getting Faucet for  ${i} ++++++++++`);
+        log.info(`=== Starting Getting Faucet for wallet ${wallet.address} ===`);
+        const payloadFaucet = {
+            chain_id: 18880,
+            to: wallet.address,
+            cf_turnstile_response: await solveCaptcha(apiKey),
+        };
+        const faucet = await getFaucet(payloadFaucet, proxy);
+
+        if (faucet && faucet.message === 'Success') {
+            log.info(`Faucet Success https://blockscout-testnet.expchain.ai/address/${wallet.address}`);
+        } else {
+            log.error(`${faucet?.data || 'Unknown error'} Claim Faucet Failed...`);
         }
+
+        await new Promise((resolve) => setTimeout(resolve, 3 * 1000));
+
     }
 }
 
 getFaucetAll();
+
+
