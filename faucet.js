@@ -95,7 +95,7 @@ async function getFaucetAll() {
 
 
 
-    for (let i = 86; i < proxies.length; i++) {
+    for (let i = 0; i < proxies.length; i++) {
         const proxy = proxies[i];
         const wallet = wallets[i];
 

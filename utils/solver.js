@@ -29,7 +29,6 @@ export async function solve2Captcha(key) {
  * @returns {Promise<string>} - Solved CAPTCHA token
  */
 export async function solveAntiCaptcha(key) {
-
     anticaptcha.setAPIKey(key);
 
     try {
@@ -37,6 +36,8 @@ export async function solveAntiCaptcha(key) {
         console.log("Anti-Captcha Solved!");
         return token; // Return the solved token
     } catch (err) {
-        throw new Error(`Anti-Captcha Error: ${err.message}`);
+        console.error("+++++++++Anti-Captcha Error:", err);
+        console.error("Error stack-------------:", err.stack);
+        throw new Error(`Anti----------Captcha Error: ${err.message}`);
     }
 }

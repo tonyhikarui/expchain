@@ -3,3 +3,5 @@ package-lock.json
 Token.json
 wallets.json
 backup.json
+api.txt
+proxy.txt
