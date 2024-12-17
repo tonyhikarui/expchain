@@ -36,8 +36,12 @@ export async function solveAntiCaptcha(key) {
         console.log("Anti-Captcha Solved!");
         return token; // Return the solved token
     } catch (err) {
-        console.error("+++++++++Anti-Captcha Error:", err);
-        console.error("Error stack-------------:", err.stack);
-        throw new Error(`Anti----------Captcha Error: ${err.message}`);
+        if (err && err.message && err.message.includes('ERROR_RECAPTCHA_INVALID_DOMAIN')) {
+            console.error('Error: Invalid domain for reCAPTCHA');
+            // Handle the specific error here
+        } else {
+            console.error('An unexpected error occurred:', err);
+        }
     }
 }
+
